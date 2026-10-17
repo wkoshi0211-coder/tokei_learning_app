@@ -275,6 +275,21 @@ body{overflow-x:hidden}
     color: transparent !important;
     box-sizing: border-box !important;
   }
+
+#clockCanvas, canvas {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* iPad Safariで時計操作中の文字選択・長押しを防止 */
+#clock, #clock * {
+  touch-action: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
 </style>
 </head>
 <body>
@@ -561,20 +576,24 @@ let dragging = false;
     if (delta > 180) delta -= 360;
     if (delta < -180) delta += 360;
 
-    // 「時間」モードでは左回りを禁止。
-    if (traceMode && delta < 0) return;
+    if (traceMode) {
+      // 指の細かい揺れで長針が左右に振動しないよう、
+      // 1分（6度）単位にスナップした移動量で管理する。
+      const snappedDelta = Math.round(delta / 6) * 6;
 
-    // 長針を1分=6度の目盛りにスナップ。
+      // 0〜360度の範囲で管理するため、開始位置より左側には行かない。
+      const nextSwept = Math.max(0, Math.min(360, traceSwept + snappedDelta));
+
+      // 同じ1分の位置なら描画し直さず、振動を抑える。
+      if (nextSwept === traceSwept) return;
+
+      traceSwept = nextSwept;
+      targetDeg = normalizeAngle(traceStartAngle + traceSwept);
+    }
+
+    // 長針を1分=6度の目盛りにピタッと固定する。
     const newMinute = Math.round(targetDeg / 6) % 60;
     const newDeg = newMinute * 6;
-
-    // カーソルの移動量ではなく、実際に長針が進んだ角度だけを記録。
-    let sweptDelta = newDeg - currentDeg;
-    if (sweptDelta < 0) sweptDelta += 360;
-
-    if (traceMode && sweptDelta > 0 && sweptDelta <= 180) {
-      traceSwept = Math.min(traceSwept + sweptDelta, 360);
-    }
 
     // 短針を長針に連動。
     if (lastMinute > 50 && newMinute < 10) {
@@ -591,18 +610,40 @@ let dragging = false;
   }
 
   // 長針をつかんで動かす
-  minuteHand.addEventListener("pointerdown", e => {
+  // 長針の見た目は変えず、長針の周囲45pxまで操作開始できるようにする
+  function distanceToMinuteHand(x, y) {
+    const angle = minute * 6 * Math.PI / 180 - Math.PI / 2;
+    const ex = cx + Math.cos(angle) * 250;
+    const ey = cy + Math.sin(angle) * 250;
+
+    const vx = ex - cx, vy = ey - cy;
+    const wx = x - cx, wy = y - cy;
+    const len2 = vx * vx + vy * vy;
+
+    let t = len2 ? (wx * vx + wy * vy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+
+    const px = cx + t * vx;
+    const py = cy + t * vy;
+
+    return Math.hypot(x - px, y - py);
+  }
+
+  // 実際のドラッグ開始判定を、長針そのもの＋周囲45pxに広げる
+  svg.addEventListener("pointerdown", e => {
     const p = svg.createSVGPoint();
     p.x = e.clientX;
     p.y = e.clientY;
     const q = p.matrixTransform(svg.getScreenCTM().inverse());
+
+    if (distanceToMinuteHand(q.x, q.y) > 45) return;
 
     let deg = Math.atan2(q.y - cy, q.x - cx) * 180 / Math.PI + 90;
     deg = normalizeAngle(deg);
 
     dragging = true;
     traceLastAngle = deg;
-    minuteHand.setPointerCapture?.(e.pointerId);
+    svg.setPointerCapture?.(e.pointerId);
     e.preventDefault();
   });
 
@@ -662,6 +703,34 @@ let dragging = false;
   }
 
   render();
+})();
+
+
+// iPadでの長針操作を安定させるため、既存の見た目・描画ロジックは変更しない
+const __clockCanvasTouchFix = document.querySelector('canvas');
+if (__clockCanvasTouchFix) {
+  __clockCanvasTouchFix.style.touchAction = 'none';
+  __clockCanvasTouchFix.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+  }, { passive: false });
+}
+
+
+/* iPad Safari操作性改善：既存の針描画・角度計算は変更しない */
+(function() {
+  const c = document.getElementById("clock") || document.querySelector(".clock");
+  if (!c) return;
+
+  c.style.touchAction = "none";
+
+  ["touchstart", "touchmove", "touchend", "touchcancel"].forEach(function(type) {
+    c.addEventListener(type, function(e) {
+      e.preventDefault();
+    }, { passive: false, capture: true });
+  });
+
+  c.addEventListener("dragstart", function(e) { e.preventDefault(); }, true);
+  c.addEventListener("selectstart", function(e) { e.preventDefault(); }, true);
 })();
 </script>
 </body>
