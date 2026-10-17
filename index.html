@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>時計を読もう！</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP","Yu Gothic",sans-serif;color:#17334b}
+body{overflow-x:hidden}
+.app{max-width:1450px;margin:auto;padding:12px}
+.top{display:flex;justify-content:space-between;align-items:center;background:#e8f5ff;border-radius:24px;padding:12px 18px;margin-bottom:14px}
+.title{font-size:30px;font-weight:900}.sub{font-size:16px;font-weight:700;margin-top:4px}
+.head{display:flex;gap:8px}.head button{font-size:24px;border:2px solid #3585c6;background:#fff;border-radius:15px;padding:9px 14px}
+.main{display:grid;grid-template-columns:minmax(560px,1.35fr) minmax(320px,.65fr);gap:20px;align-items:start}
+.clock{width:100%;height:auto;display:block;touch-action:none;user-select:none}
+.instruction{margin-top:6px;background:#eef8ff;border:2px solid #c9e4f7;border-radius:16px;padding:10px;text-align:center;font-size:18px;font-weight:800}
+.side{display:flex;flex-direction:column;gap:12px}.card{border-radius:20px;padding:16px}
+.now{background:#fff8dc;border:2px solid #eedb91;text-align:center}.label{font-weight:800;color:#73571a}.time{font-size:48px;font-weight:900}
+.unit{font-size:.42em;margin:0 7px}
+.problem{background:#edf9e9;border:2px solid #cde9bd}.problem h2{margin:0 0 5px;color:#25813a;font-size:20px}.center{text-align:center}.target{font-size:38px;font-weight:900;margin:6px 0}
+.btn{width:100%;border:2px solid #8bbfe9;border-radius:15px;background:#eff8ff;color:#1768a7;padding:11px;font-size:18px;font-weight:900}.answer{background:#4db755;border-color:#4db755;color:#fff;margin-top:8px}
+.info{background:#eaf4ff}.info h2{margin:0 0 5px;color:#2169a7;font-size:20px}.info p{margin:3px 0;font-size:16px;font-weight:700}
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.actions button{min-height:52px;border-radius:14px;border:2px solid #b8d4e9;background:#fff;color:#286b9f;font-weight:900}.actions .hint{background:#fff2bf;border-color:#e3ce70;color:#705200}.actions .practice{background:#ffe5ef;border-color:#efabc5;color:#c13d70}
+.feedback{min-height:28px;text-align:center;font-weight:900;color:#b45b00}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.modes button{padding:12px;border-radius:15px;border:2px solid #b9d6ec;background:#fff;color:#276a9f;font-weight:900}.modes .on{background:#2e82d4;color:#fff}
+@media(max-width:900px){.main{grid-template-columns:1fr}.side{max-width:720px;margin:auto;width:100%}.title{font-size:24px}.sub{font-size:14px}}
+@media(max-width:520px){.sub{display:none}.actions{grid-template-columns:1fr 1fr}.actions .practice{grid-column:span 2}.modes button{font-size:12px}.time{font-size:40px}.target{font-size:32px}}
+
+  .minute-progress {
+    text-align: center;
+    font-size: 100px448px;
+    font-weight: 700;
+    color: #FFD700;
+    margin: 8px auto 16px;
+    min-height: 36px;
+  }
+
+  .now-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  .now-controls .btn {
+    margin-top: 10px;
+  }
+
+  #problemFrame { display:none !important; }
+
+  .current-time-display {
+    text-align: center;
+    font-size: 60px;
+    font-weight: 700;
+    color: #000000;
+    margin: 8px auto 2px;
+    line-height: 1.2;
+  }
+
+  #minuteProgress {
+    color: #FFD700 !important;
+    font-size: 100px;
+  }
+
+  /* iPad / タブレット用：画面幅からはみ出さないレイアウト */
+  html, body {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    min-width: 0 !important;
+  }
+
+  /* 外側の固定幅を解除 */
+  .container, .wrapper, .main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  /* タイトルを画面内に収める */
+  h1, h2, .title {
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+  }
+
+  /* 時計は画面幅に合わせて縮小 */
+  svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* 時計と周辺要素の横方向はみ出しを防止 */
+  .clock, .clock-area, .clock-wrap {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  /* iPad横向き・縦向きのどちらでも中央に収める */
+  @media (max-width: 1100px) {
+    .main {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      width: 100% !important;
+      padding-left: 12px !important;
+      padding-right: 12px !important;
+    }
+
+    .main > * {
+      max-width: 100% !important;
+    }
+
+    .time-control-panel {
+      position: static !important;
+      transform: none !important;
+      width: min(100%, 360px) !important;
+      min-width: 0 !important;
+      margin: 16px auto 0 !important;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .main {
+      padding-left: 8px !important;
+      padding-right: 8px !important;
+    }
+  }
+
+  /* iPad：時計を左、時刻・時間操作を右に2分割 */
+  @media (min-width: 901px) and (max-width: 1366px) {
+    .main {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 0.48fr) !important;
+      align-items: center !important;
+      justify-items: center !important;
+      column-gap: 24px !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 12px 24px !important;
+    }
+
+    .main > * {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    /* アナログ時計を左側 */
+    .main > :first-child {
+      grid-column: 1 !important;
+      grid-row: 1 !important;
+      width: 100% !important;
+      max-width: 560px !important;
+      justify-self: center !important;
+    }
+
+    /* 現在時刻・時間ボタンを右側 */
+    .main > .time-control-panel {
+      grid-column: 2 !important;
+      grid-row: 1 !important;
+      position: static !important;
+      transform: none !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 360px !important;
+      margin: 0 !important;
+      justify-self: center !important;
+    }
+
+    .main > .time-control-panel .current-time-display,
+    .main > .time-control-panel #nowTimeMode,
+    .main > .time-control-panel .minute-progress {
+      position: static !important;
+    }
+  }
+
+  .time-control-panel .current-time-display { display: none !important; }
+  .time-control-panel .minute-progress { display: none !important; }
+  .time-control-panel #nowTimeMode {
+    color: transparent !important;
+    background: #FFD700 !important;
+    border-color: #FFD700 !important;
+    font-size: 0 !important;
+  }
+
+  /* 右側の現在時刻・黄色い経過時間は非表示 */
+  #currentTimeDisplay,
+  .current-time-display,
+  #minuteProgress,
+  .minute-progress {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
+  /* 黄色ボタン：高さを4倍にする */
+  .time-control-panel #nowTimeMode {
+    color: transparent !important;
+    background: #FFD700 !important;
+    border-color: #FFD700 !important;
+    font-size: 0 !important;
+    height: 4em !important;
+    min-height: 4em !important;
+  }
+
+  .time-control-panel #nowTimeMode {
+    height: 4em !important;
+    min-height: 4em !important;
+  }
+
+  .time-control-panel #nowTimeMode {
+    width: 5em !important;
+    min-width: 5em !important;
+    height: 4em !important;
+    min-height: 4em !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+  }
+
+  .time-control-panel #nowTimeMode {
+    width: 360px !important;
+    min-width: 360px !important;
+    height: 360px !important;
+    min-height: 360px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  @media (max-width: 900px) {
+    .time-control-panel #nowTimeMode {
+      width: 220px !important;
+      min-width: 220px !important;
+      height: 220px !important;
+      min-height: 220px !important;
+    }
+  }
+
+  #nowTimeMode {
+    width: 360px !important;
+    min-width: 360px !important;
+    height: 360px !important;
+    min-height: 360px !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    flex: 0 0 360px !important;
+  }
+
+  #nowTimeMode {
+    width: 180px !important;
+    min-width: 180px !important;
+    height: 180px !important;
+    min-height: 180px !important;
+    max-width: 180px !important;
+    max-height: 180px !important;
+    flex: 0 0 180px !important;
+    border-radius: 50% !important;
+    background: #FFD700 !important;
+    border: 3px solid #000000 !important;
+    color: transparent !important;
+    box-sizing: border-box !important;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <div><div class="title">時計を読もう！</div><div class="sub">長いはりを動かして、時こくを読もう</div></div>
+</header>
+
+<div class="main">
+<section>
+<svg id="clock" class="clock" viewBox="0 0 700 700" role="img" aria-label="長針を動かして時刻を読むアナログ時計">
+  <circle cx="350" cy="350" r="320" fill="#eaf8ff" stroke="#697277" stroke-width="4"/>
+  <circle cx="350" cy="350" r="300" fill="#f7c7d9" stroke="#777" stroke-width="3"/>
+  <circle cx="350" cy="350" r="190" fill="#fff"/>
+  <circle cx="350" cy="350" r="110" fill="#f5c9dc"/>
+
+  <path id="yellowArc" fill="#ffd84d" fill-opacity="0.62" stroke="none"/>
+  <g id="spokes" stroke="#ee8eb8" stroke-width="2"/>
+  <g id="ticks"/>
+  <g id="mins" fill="#0872bd" text-anchor="middle" font-weight="700"/>
+  <g id="hours" fill="#ed1c24" text-anchor="middle" font-weight="500"/>
+  <g id="inner" fill="#ed1c24" text-anchor="middle" font-weight="500"/>
+
+  <path id="hourHand" fill="#ef2027" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+  <path id="minuteHand" fill="#087bbb" stroke="#222" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="350" cy="350" r="16" fill="#fff" stroke="#222" stroke-width="2"/>
+</svg>
+</section>
+
+<aside class="side">
+<section class="now-controls">
+  <div id="currentTimeDisplay" class="current-time-display" aria-live="polite">--:--</div>
+  <button id="nowTimeMode" class="btn" type="button"></button>
+  <div id="minuteProgress" class="minute-progress" aria-live="polite">0分</div>
+</section>
+
+<section id="problemFrame" class="card problem">
+  <h2>いまの時こく</h2>
+  <div class="time-read-mode">
+    <div class="time-point">
+      <div class="time-label">はじめ</div>
+      <div id="startTimeValue" class="time-value">--:--</div>
+    </div>
+    <div class="time-point">
+      <div class="time-label">おわり</div>
+      <div id="endTimeValue" class="time-value">--:--</div>
+    </div>
+  </div>
+</section>
+
+<div id="feedback" class="feedback" aria-live="polite"></div>
+</aside>
+</div>
+
+</div>
+
+<script>
+(() => {
+  const svg = document.getElementById("clock");
+  const cx = 350, cy = 350;
+  const NS = "http://www.w3.org/2000/svg";
+
+  const make = (tag, attrs={}) => {
+    const e = document.createElementNS(NS, tag);
+    Object.entries(attrs).forEach(([k,v]) => e.setAttribute(k,v));
+    return e;
+  };
+
+  // 角度の基準：
+  // 0度 = 12時方向
+  // 時計回りを正方向
+  const point = (deg, r) => {
+    const a = deg * Math.PI / 180 - Math.PI / 2;
+    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+  };
+
+  // 外周の60分目盛り
+  for (let i=0; i<60; i++) {
+    const a = i * Math.PI / 30 - Math.PI / 2;
+    const r1 = i % 5 === 0 ? 280 : 294;
+    const r2 = 307;
+    document.getElementById("ticks").appendChild(make("line", {
+      x1: cx + Math.cos(a)*r1,
+      y1: cy + Math.sin(a)*r1,
+      x2: cx + Math.cos(a)*r2,
+      y2: cy + Math.sin(a)*r2,
+      stroke: i%5===0 ? "#666" : "#777",
+      "stroke-width": i%5===0 ? 5 : 2
+    }));
+
+    // 0〜59は文字盤の円周より外側に配置する。
+    // 外周円の半径320に対して、数字の中心を350に置くことで、
+    // 数字そのものが円周線に重ならないようにする。
+    // SVGの表示領域からはみ出さないようにしつつ、
+    // 外周円(r=320)より外側(r=333)に配置する。
+    // これで上端・左右端の数字も切れず、ページ上部のタイトルとも重ならない。
+    const minuteLabelRadius = 333;
+    const [x,y] = point(i*6, minuteLabelRadius);
+    const t = make("text", {
+      x, y:y+1,
+      "font-size": i%5===0 ? 18 : 13,
+      "dominant-baseline":"middle"
+    });
+    t.textContent = i;
+    document.getElementById("mins").appendChild(t);
+  }
+
+  // 12本の区切り線
+  for (let i=0; i<12; i++) {
+    const [x,y] = point(i*30, 210);
+    document.getElementById("spokes").appendChild(
+      make("line",{x1:cx,y1:cy,x2:x,y2:y})
+    );
+  }
+
+  /*
+    ★ここが今回の重要部分
+    短針が示す1〜12の数字を、指定された角度に固定する。
+
+    12 → 15°
+     1 → 45°
+     2 → 75°
+     3 → 105°
+     4 → 135°
+     5 → 165°
+     6 → 195°
+     7 → 225°
+     8 → 255°
+     9 → 285°
+    10 → 315°
+    11 → 345°
+
+    つまり「12時方向を0°」として、
+    すべて30°ずつ時計回りに進み、15°だけずらした位置。
+  */
+  // 外側の赤い1〜12だけを、指定された通常の時計位置に配置。
+  // 中心に近い内側の数字は従来の位置をそのまま維持する。
+  // 0°=真上、時計回り。
+  const outerHourAngles = {
+    12:0, 1:30, 2:60, 3:90, 4:120, 5:150,
+    6:180, 7:210, 8:240, 9:270, 10:300, 11:330
+  };
+
+  // 円周に近い大きな赤い1〜12
+  for (let n=1; n<=12; n++) {
+    const [x,y] = point(outerHourAngles[n], 262);
+    const t = make("text", {
+      x, y:y+8,
+      "font-size":58,
+      "dominant-baseline":"middle"
+    });
+    t.textContent = n;
+    document.getElementById("hours").appendChild(t);
+  }
+
+  // 中心に近い赤い1〜12は、時計の中心から測った角度で配置する。
+  // 12=15°, 1=45°, 2=75°, 3=105°, 4=135°, 5=165°,
+  // 6=195°, 7=225°, 8=255°, 9=285°, 10=315°, 11=345°.
+  // （以前の指定：12=15°, 1=45°, ... 11=345°）
+  // 中心に近い赤い1〜12は、指定された15°ずれの位置に固定。
+  // 0°=真上、時計回り。
+  const innerHourAngles = {
+    12:15, 1:45, 2:75, 3:105, 4:135, 5:165,
+    6:195, 7:225, 8:255, 9:285, 10:315, 11:345
+  };
+
+  for (let n=1; n<=12; n++) {
+    const [x,y] = point(innerHourAngles[n], 155);
+    const t = make("text", {
+      x, y:y+7,
+      "font-size":36,
+      "dominant-baseline":"middle"
+    });
+    t.textContent = n;
+    document.getElementById("inner").appendChild(t);
+  }
+
+  let hour = 3;
+  let minute = 15;
+let dragging = false; 
+  let traceMode = false;
+  let traceStartAngle = null;
+  let traceSwept = 0;
+  let traceTotalMinutes = 0;
+  let startRecordedTime = null;
+  let endRecordedTime = null;
+  let traceLastAngle = null;
+  let clockwiseTracing = false;
+  let lastMinute = minute;
+
+  const minuteHand = document.getElementById("minuteHand");
+  const hourHand = document.getElementById("hourHand");
+
+  // 針：先端を尖らせた形
+  function handPath(angle, length, width) {
+    const a = angle*Math.PI/180 - Math.PI/2;
+    const ux = Math.cos(a), uy = Math.sin(a);
+    const vx = -uy, vy = ux;
+    const back = 12;
+    const shoulder = length - 34;
+
+    return `
+      M ${cx-ux*back+vx*width*.45} ${cy-uy*back+vy*width*.45}
+      L ${cx+ux*shoulder+vx*width*.5} ${cy+uy*shoulder+vy*width*.5}
+      L ${cx+ux*length} ${cy+uy*length}
+      L ${cx+ux*shoulder-vx*width*.5} ${cy+uy*shoulder-vy*width*.5}
+      L ${cx-ux*back-vx*width*.45} ${cy-uy*back-vy*width*.45}
+      Z`;
+  }
+
+  function normalizeAngle(deg) {
+    deg %= 360;
+    return deg < 0 ? deg + 360 : deg;
+  }
+
+  function yellowTracePath(startDeg, sweepDeg, radius=286) {
+    if (startDeg === null || sweepDeg <= 0) return "";
+    const sweep = Math.min(sweepDeg, 359.9);
+    const [sx, sy] = point(startDeg, radius);
+    const [ex, ey] = point(startDeg + sweep, radius);
+    const large = sweep > 180 ? 1 : 0;
+
+    return `M ${cx} ${cy}
+            L ${sx} ${sy}
+            A ${radius} ${radius} 0 ${large} 1 ${ex} ${ey}
+            Z`;
+  }
+
+  function updateMinuteProgress() {
+    const el = document.getElementById("minuteProgress");
+    if (!el) return;
+    const minutes = Math.round((traceSwept || 0) / 6);
+    el.textContent = `${Math.min(minutes, 60)}分`;
+  }
+
+  function renderYellowTrace() {
+    const arc = document.getElementById("yellowArc");
+    if (!arc) return;
+
+    if (!traceMode || traceStartAngle === null || traceSwept <= 0) {
+      arc.setAttribute("d", "");
+      updateMinuteProgress();
+      return;
+    }
+
+    arc.setAttribute("d", yellowTracePath(traceStartAngle, traceSwept));
+    updateMinuteProgress();
+  }
+
+
+
+  function updateCurrentTimeDisplay() {
+    const el = document.getElementById("currentTimeDisplay");
+    if (!el) return;
+    el.textContent = `${hour}時${String(minute).padStart(2, "0")}分`;
+  }
+
+  function render() {
+    updateCurrentTimeDisplay();
+    // 長針は1分ごと
+    minuteHand.setAttribute("d", handPath(minute*6, 286, 18));
+
+    /*
+      短針は「時の角度 + 分×0.5°」。
+      例えば3時30分なら、3時と4時のちょうど中間まで動く。
+    */
+    const hourAngle = hour*30 + minute*0.5;
+    // 短針：長さ150は変更せず、太さ43→21.5（半分）
+    hourHand.setAttribute("d", handPath(hourAngle, 150, 21.5));
+    renderYellowTrace();
+  }
+
+  function moveMinute(e) {
+    const p = svg.createSVGPoint();
+    p.x = e.clientX;
+    p.y = e.clientY;
+    const q = p.matrixTransform(svg.getScreenCTM().inverse());
+
+    let targetDeg = Math.atan2(q.y - cy, q.x - cx) * 180 / Math.PI + 90;
+    targetDeg = normalizeAngle(targetDeg);
+
+    const currentDeg = minute * 6;
+    let delta = targetDeg - currentDeg;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+
+    // 「時間」モードでは左回りを禁止。
+    if (traceMode && delta < 0) return;
+
+    // 長針を1分=6度の目盛りにスナップ。
+    const newMinute = Math.round(targetDeg / 6) % 60;
+    const newDeg = newMinute * 6;
+
+    // カーソルの移動量ではなく、実際に長針が進んだ角度だけを記録。
+    let sweptDelta = newDeg - currentDeg;
+    if (sweptDelta < 0) sweptDelta += 360;
+
+    if (traceMode && sweptDelta > 0 && sweptDelta <= 180) {
+      traceSwept = Math.min(traceSwept + sweptDelta, 360);
+    }
+
+    // 短針を長針に連動。
+    if (lastMinute > 50 && newMinute < 10) {
+      hour = hour === 12 ? 1 : hour + 1;
+    } else if (lastMinute < 10 && newMinute > 50) {
+      hour = hour === 1 ? 12 : hour - 1;
+    }
+
+    minute = newMinute;
+    lastMinute = newMinute;
+    traceLastAngle = newDeg;
+
+    render();
+  }
+
+  // 長針をつかんで動かす
+  minuteHand.addEventListener("pointerdown", e => {
+    const p = svg.createSVGPoint();
+    p.x = e.clientX;
+    p.y = e.clientY;
+    const q = p.matrixTransform(svg.getScreenCTM().inverse());
+
+    let deg = Math.atan2(q.y - cy, q.x - cx) * 180 / Math.PI + 90;
+    deg = normalizeAngle(deg);
+
+    dragging = true;
+    traceLastAngle = deg;
+    minuteHand.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+  });
+
+  svg.addEventListener("pointermove", e => {
+    if (dragging) moveMinute(e);
+  });
+
+  svg.addEventListener("pointerup", () => dragging=false);
+  svg.addEventListener("pointercancel", () => dragging=false);
+  document.getElementById("nowTimeMode").addEventListener("click", () => {
+    const problem = document.getElementById("problemFrame");
+    const progress = document.getElementById("minuteProgress");
+
+    if (!traceMode) {
+      // 1回目：「時間」
+      traceMode = true;
+      traceStartAngle = minute * 6;
+      traceLastAngle = traceStartAngle;
+      traceSwept = 0;
+      traceTotalMinutes = 0;
+      clockwiseTracing = false;
+
+      if (problem) problem.style.display = "none";
+      if (progress) progress.textContent = "0分";
+    } else {
+      // 2回目：「時間」
+      // 黄色い扇形を消し、問題枠を再表示。
+      traceMode = false;
+      traceStartAngle = null;
+      traceLastAngle = null;
+      traceSwept = 0;
+      traceTotalMinutes = 0;
+      clockwiseTracing = false;
+
+      if (progress) progress.textContent = "0分";
+      if (problem) problem.style.display = "";
+    }
+
+    render();
+  });
+
+
+
+
+
+  const speakButton = document.getElementById("speak");
+  if (speakButton) {
+    speakButton.onclick = () => {
+      if ("speechSynthesis" in window) {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(`${hour}時${minute}分`);
+        u.lang="ja-JP";
+        u.rate=.85;
+        speechSynthesis.speak(u);
+      }
+    };
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
